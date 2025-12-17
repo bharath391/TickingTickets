@@ -1,0 +1,28 @@
+{
+  "name": "backend",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts --exec \"tsx src/index.ts\"",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "worker1": "npx tsx src/workers/sync.req.worker.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "pg": "^8.16.3",
+    "tsc": "^2.0.4",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/nodemon": "^1.19.6",
+    "nodemon": "^3.1.11",
+    "typescript": "^5.9.3"
+  }
+}
