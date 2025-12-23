@@ -15,6 +15,7 @@ interface CustomPoolClient extends PoolClient {
 }
 
 export const query = async (text: string, params: any) => {
+  //this is nt exclusive query , meaning this will run simultaneously with other queries
   const start = Date.now()
   const res = await pool.query(text, params)
   const duration = Date.now() - start
@@ -23,8 +24,10 @@ export const query = async (text: string, params: any) => {
 }
 
 export const getClient = async () => {
-  // We must force-cast it because the default pool.connect() doesn't know about 'lastQuery'.
+  //exclusive client , thus awaits until all the operations(multiple queries) are done, if one of them 
+  //fail return none (atomic execution)
   const client = await pool.connect() as CustomPoolClient
+  // We must force-cast it because the default pool.connect() doesn't know about 'lastQuery'.
   
   const query = client.query
   const release = client.release
