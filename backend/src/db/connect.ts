@@ -1,0 +1,1 @@
+//connect to my postgresql , one to query and one getClient (to execute multiple queries in order , i.e connected to pool and then close (if user dont close , we have to close with in 5 seconds))
