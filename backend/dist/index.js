@@ -6,6 +6,13 @@ dotenv.config();
 const app = express();
 app.use(loggerMiddleware);
 app.use(express.json());
-app.use("/v1", v1Router);
-app.listen(process.env.PORT, () => console.log("Server Listening on port ", process.env.PORT));
+app.use("/api/v1", v1Router);
+app.get("/", (req, res) => {
+    res.send("Hello World");
+});
+app.get("/health", (req, res) => {
+    res.json({ status: "ok", message: "Server is running" });
+});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server Listening on port ${PORT}`));
 //# sourceMappingURL=index.js.map

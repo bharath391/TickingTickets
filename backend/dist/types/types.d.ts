@@ -1,3 +1,4 @@
+import type { Request } from "express";
 interface authReq extends Request {
     user?: {
         id: string;

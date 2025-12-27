@@ -14,6 +14,11 @@ export const signup = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Please provide all fields" });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
     // Check if user already exists
     const userCheck = await execQueryPool("SELECT * FROM users WHERE email = $1", [email]);
     if (userCheck.rows.length > 0) {
@@ -46,6 +51,11 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Please provide email and password" });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
     // Find user
     const userResult = await execQueryPool("SELECT * FROM users WHERE email = $1", [email]);
     const user = userResult.rows[0];
@@ -70,12 +80,18 @@ export const login = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET || "dev_secret",
-      { expiresIn: "24h" }
+      { expiresIn: "15d" }
     );
+
+    res.cookie("jwt", token, {
+      maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days in MS
+      httpOnly: true,
+      sameSite: true, // As requested
+      secure: process.env.NODE_ENV !== "development", // Optional: strictly explicit secure flag
+    });
 
     res.status(200).json({
       message: "Login successful",
-      token,
       user: {
         id: user.id,
         name: user.name,

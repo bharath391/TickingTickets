@@ -1,13 +1,10 @@
-type role = "user" | "admin";
+import type { Request } from "express";
+
 interface authReq extends Request{
     user?:{
         id:string,
         email:string,
-        role:role
     }
 }
-
-
-
 
 export type {authReq};

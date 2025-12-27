@@ -1,4 +1,4 @@
-declare const singup: (req: any, res: any) => Promise<void>;
-declare const login: (req: any, res: any) => Promise<void>;
-export { singup, login };
+import type { Request, Response } from "express";
+export declare const signup: (req: Request, res: Response) => Promise<void>;
+export declare const login: (req: Request, res: Response) => Promise<void>;
 //# sourceMappingURL=auth.controller.d.ts.map
