@@ -9,7 +9,7 @@ const userAuthMiddleware = async(
   next: NextFunction
 ) => {
   try {
-    const token = req.cookies?.token;
+    const token = req.cookies?.jwt;
 
     if (!token) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -18,23 +18,32 @@ const userAuthMiddleware = async(
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET!
-    ) as JwtPayload;
+    ) as JwtPayload; // Casting to JwtPayload, but we access custom props
+
+    // decoded payload is { userId, email, ... }
+    const userId = (decoded as any).userId;
+    
     const query = "select * from users where id=$1";
-    const values = [decoded.user.id];
+    const values = [userId];
     const result = await execQueryPool(query, values);
     if (result.rowCount === 0) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    req.user = decoded.user; 
+    
+    req.user = {
+        id: userId,
+        email: (decoded as any).email
+    }; 
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
+
 const adminAuthMiddleware = async (req:authReq,res:Response,next:NextFunction) => {
     try{
         //check user jwt and assign user to incoming req = authReq
-        const token = req.cookies?.token;
+        const token = req.cookies?.jwt;
         
         if (!token) {
           return res.status(401).json({ message: "Unauthorized" });
@@ -43,13 +52,20 @@ const adminAuthMiddleware = async (req:authReq,res:Response,next:NextFunction) =
           token,
           process.env.JWT_SECRET!
         ) as JwtPayload;
+
+        const userId = (decoded as any).userId;
+
         const query = "select * from admins where id=$1";
-        const values = [decoded.user.id];
+        const values = [userId];
         const result = await execQueryPool(query, values);
         if (result.rowCount === 0) {
           return res.status(401).json({ message: "Unauthorized" });
         }
-        req.user = decoded.user; 
+        
+        req.user = {
+            id: userId,
+            email: (decoded as any).email
+        }; 
         next();
     }catch(e){
         console.log("Error in auth middleware ");

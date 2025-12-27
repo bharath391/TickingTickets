@@ -79,7 +79,7 @@ export const createShow = async (req: Request, res: Response) => {
             res.status(500).json({ message: "Error creating show" });
             return;
         }
-        res.status(201).json({ message: "Show created successfully" });
+        res.status(201).json({ message: "Show created successfully (SQL Implementation Pending)" });
     }, req, res, "createShow");
 };
 

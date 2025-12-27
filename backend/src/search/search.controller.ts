@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import tryCatch from "../middlewares/tryCatch.js";
+import { execQueryPool } from "../db/connect.js";
 
 export const searchShows = async (req: Request, res: Response) => {
     await tryCatch(async (req: Request, res: Response) => {
@@ -9,7 +10,6 @@ export const searchShows = async (req: Request, res: Response) => {
             genre, 
             startDate, 
             endDate, 
-            showType,
             limit,
             page 
         } = req.query;
@@ -18,39 +18,53 @@ export const searchShows = async (req: Request, res: Response) => {
         const pageNum = Number(page) || 1;
         const offset = (pageNum - 1) * limitNum;
 
-        // Construct filter object or just log parameters for now
-        const filters = {
-            title: title as string,
-            theatre: theatre as string,
-            genre: genre as string,
-            startDate: startDate as string,
-            endDate: endDate as string,
-            showType: showType as string,
-            limit: limitNum,
-            offset: offset
-        };
+        const query = `
+            SELECT 
+                s.id AS show_id,
+                s.show_time,
+                s.seat_count,
+                s.show_type,
+                m.title AS movie_title,
+                m.genres AS movie_genre,
+                m.description AS movie_desc,
+                m.price AS movie_price,
+                t.name AS theatre_name,
+                t.location AS theatre_location
+            FROM shows s
+            JOIN movies m ON s.movie_id = m.id
+            JOIN theatres t ON s.theatre_id = t.id
+            WHERE 
+                ($1::text IS NULL OR m.title ILIKE '%' || $1 || '%') 
+                AND ($2::text IS NULL OR t.name ILIKE '%' || $2 || '%') 
+                AND ($3::text IS NULL OR m.genres ILIKE '%' || $3 || '%') 
+                AND ($4::timestamp IS NULL OR s.show_time >= $4) 
+                AND ($5::timestamp IS NULL OR s.show_time <= $5)
+            ORDER BY s.show_time ASC
+            LIMIT $6 OFFSET $7;
+        `;
 
-        // TODO: Write SQL query to join shows, movies, and theatres tables
-        // and filter based on the provided parameters.
-        // Example logic:
-        // SELECT s.*, m.title, m.genres, t.name as theatre_name 
-        // FROM shows s
-        // JOIN movies m ON s.movie_id = m.id
-        // JOIN theatres t ON s.theatre_id = t.id
-        // WHERE 
-        //   ($1::text IS NULL OR m.title ILIKE '%' || $1 || '%') AND
-        //   ($2::text IS NULL OR t.name ILIKE '%' || $2 || '%') AND
-        //   ...
-        
-        console.log("Search filters:", filters);
+        const values = [
+            title || null,
+            theatre || null,
+            genre || null,
+            startDate || null,
+            endDate || null,
+            limitNum,
+            offset
+        ];
+
+        const result = await execQueryPool(query, values);
 
         res.status(200).json({ 
-            message: "Search results fetched successfully (SQL Implementation Pending)", 
-            data: [],
+            message: "Search results fetched successfully", 
+            data: result.rows,
             meta: {
                 page: pageNum,
                 limit: limitNum,
-                filters
+                count: result.rowCount,
+                filters: {
+                    title, theatre, genre, startDate, endDate
+                }
             }
         });
     }, req, res, "searchShows");
