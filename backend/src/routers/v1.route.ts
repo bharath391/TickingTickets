@@ -1,10 +1,11 @@
 import {Router, type Router as RouterType} from "express";
-import authMiddleware from "../middlewares/auth.middleware.js";
+import {userAuthMiddleware,adminAuthMiddleware} from "../middlewares/auth.middleware.js";
+import authRouter from "../auth/auth.route.js";
+
 const router: RouterType = Router();
 
-// TODO: Import and use actual routers when they are created
+router.use("/auth", authRouter);
 // router.use("/payments",authMiddleware,paymentRouter);
-// router.use("/auth",authRouter);
 // router.use("/admin",authMiddleware,adminRouter);
 
 // Temporary test route to verify logger middleware
