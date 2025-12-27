@@ -1,3 +1,4 @@
+import { firstQueue, secondQueue } from "../redis/redis.queues.js";
 
 export class BookingService {
     /**
@@ -11,7 +12,7 @@ export class BookingService {
      */
     async lockSeats(userId: string, showId: string, seatIds: number[]) {
         console.log(`[BookingService] Locking seats ${seatIds} for user ${userId} in show ${showId}`);
-
+        firstQueue.add({ userId, showId, seatIds, startTime: Date.now() }, { delay: 31000 });
         // TODO: Implement Redis Logic
         // const s = await redis.get(...)
         // if (exists) throw new Error("Seat taken")
