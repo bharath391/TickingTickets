@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { execQueryPool } from "../db/connect.js";
 import tryCatch from "../middlewares/tryCatch.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 // ------------------- MOVIES -------------------
 
@@ -13,10 +15,10 @@ export const createMovie = async (req: Request, res: Response) => {
         const query = "INSERT INTO movies (title, genres, description, price) VALUES ($1, $2, $3, $4) RETURNING *;";
         const values = [title, genres, description, price];
         const result = await execQueryPool(query, values);
-        if (result.rowCount === 0){
+        if (result.rowCount === 0) {
             res.status(500).json({ message: "Error creating movie" });
             return;
-        } 
+        }
         res.status(201).json({ message: "Movie created successfully" });
     }, req, res, "createMovie");
 };
@@ -28,8 +30,8 @@ export const updateMovie = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Movie ID is required" });
         }
         const { title, genres, description, price } = req.body;
-        const beforeValues  = await execQueryPool("SELECT * FROM movies WHERE id = $1;", [id]);
-        if (beforeValues.rowCount === 0){
+        const beforeValues = await execQueryPool("SELECT * FROM movies WHERE id = $1;", [id]);
+        if (beforeValues.rowCount === 0) {
             res.status(404).json({ message: "Movie not found" });
             return;
         }
@@ -37,7 +39,7 @@ export const updateMovie = async (req: Request, res: Response) => {
 
         const values = [title || beforeValues.rows[0].title, genres || beforeValues.rows[0].genres, description || beforeValues.rows[0].description, price || beforeValues.rows[0].price, id];
         const result = await execQueryPool(query, values);
-        if (result.rowCount === 0){
+        if (result.rowCount === 0) {
             res.status(500).json({ message: "Error updating movie" });
             return;
         }
@@ -51,14 +53,14 @@ export const deleteMovie = async (req: Request, res: Response) => {
         if (!id) {
             return res.status(400).json({ message: "Movie ID is required" });
         }
-        
+
         const query = "DELETE FROM movies WHERE id = $1 RETURNING *;";
         const values = [id];
         const result = await execQueryPool(query, values);
-        if (result.rowCount === 0){
+        if (result.rowCount === 0) {
             res.status(404).json({ message: "Movie not found or already deleted" });
             return;
-        }  
+        }
         res.status(200).json({ message: "Movie deleted successfully" });
     }, req, res, "deleteMovie");
 };
@@ -75,7 +77,7 @@ export const createShow = async (req: Request, res: Response) => {
         const query = "INSERT INTO shows (movie_id, theatre_id, show_type, show_time, seat_count) VALUES ($1, $2, $3, $4, $5) RETURNING *;";
         const values = [movie_id, theatre_id, show_type, show_time, seat_count];
         const result = await execQueryPool(query, values);
-        if (result.rowCount === 0){
+        if (result.rowCount === 0) {
             res.status(500).json({ message: "Error creating show" });
             return;
         }
@@ -90,12 +92,12 @@ export const updateShow = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Show ID is required" });
         }
         const { movie_id, theatre_id, show_type, show_time, seat_count } = req.body;
-        
+
         const result = await execQueryPool("SELECT * FROM shows WHERE id = $1", [id]);
         if (result.rowCount == 0) {
             return res.status(404).json({ msg: "Show not found" });
         }
-        
+
         const query = "UPDATE shows SET movie_id = $1, theatre_id = $2, show_type = $3, show_time = $4, seat_count = $5 WHERE id = $6 RETURNING *";
         const values = [
             movie_id || result.rows[0].movie_id,
@@ -105,7 +107,7 @@ export const updateShow = async (req: Request, res: Response) => {
             seat_count || result.rows[0].seat_count,
             id
         ];
-        
+
         const updated = await execQueryPool(query, values);
         res.status(200).json({ message: "Show updated successfully", data: updated.rows[0] });
     }, req, res, "updateShow");
@@ -117,11 +119,11 @@ export const deleteShow = async (req: Request, res: Response) => {
         if (!id) {
             return res.status(400).json({ message: "Show ID is required" });
         }
-        
+
         const query = "DELETE FROM shows WHERE id = $1 RETURNING *";
         const values = [id];
         const result = await execQueryPool(query, values);
-        
+
         if (result.rowCount == 0) {
             return res.status(404).json({ msg: "Show not found" });
         }
@@ -137,15 +139,15 @@ export const createTheatre = async (req: Request, res: Response) => {
         if (!name || !location) {
             return res.status(400).json({ message: "All fields are required" });
         }
-        
+
         const query = "INSERT INTO theatres (name, location) VALUES ($1, $2) RETURNING *;";
         const values = [name, location];
         const result = await execQueryPool(query, values);
-        
+
         if (result.rowCount === 0) {
             return res.status(500).json({ message: "Error creating theatre" });
         }
-        
+
         res.status(201).json({ message: "Theatre created successfully", data: result.rows[0] });
     }, req, res, "createTheatre");
 };
@@ -157,7 +159,7 @@ export const updateTheatre = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Theatre ID is required" });
         }
         const { name, location } = req.body;
-        
+
         const beforeValues = await execQueryPool("SELECT * FROM theatres WHERE id = $1;", [id]);
         if (beforeValues.rowCount === 0) {
             return res.status(404).json({ message: "Theatre not found" });
@@ -181,7 +183,7 @@ export const deleteTheatre = async (req: Request, res: Response) => {
         if (!id) {
             return res.status(400).json({ message: "Theatre ID is required" });
         }
-        
+
         const query = "DELETE FROM theatres WHERE id = $1 RETURNING *;";
         const values = [id];
         const result = await execQueryPool(query, values);
@@ -192,5 +194,64 @@ export const deleteTheatre = async (req: Request, res: Response) => {
 
         res.status(200).json({ message: "Theatre deleted successfully" });
     }, req, res, "deleteTheatre");
+};
+
+// Admin Login Controller
+export const adminLogin = async (req: Request, res: Response) => {
+    await tryCatch(async (req: Request, res: Response) => {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: "Please provide email and password" });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Invalid email format" });
+        }
+
+        // Find admin
+        const adminResult = await execQueryPool("SELECT * FROM admins WHERE email = $1", [email]);
+        const admin = adminResult.rows[0];
+
+        if (!admin) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        // Check password
+        const isMatch = await bcrypt.compare(password, admin.password);
+
+        if (!isMatch) {
+            // FALLBACK FOR DEVELOPMENT (Seed Data Support)
+            if (password === admin.password) {
+                // Allow match
+            } else {
+                return res.status(400).json({ message: "Invalid credentials" });
+            }
+        }
+
+        // Generate JWT
+        const token = jwt.sign(
+            { userId: admin.id, email: admin.email },
+            process.env.JWT_SECRET || "dev_secret",
+            { expiresIn: "15d" }
+        );
+
+        res.cookie("jwt", token, {
+            maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days in MS
+            httpOnly: true,
+            sameSite: process.env.NODE_ENV !== "development", // for my vitests to run
+            secure: process.env.NODE_ENV !== "development", // in production , https
+        });
+
+        res.status(200).json({
+            message: "Admin login successful",
+            user: {
+                id: admin.id,
+                name: admin.name,
+                email: admin.email,
+            },
+        });
+    }, req, res, "adminLogin");
 };
 

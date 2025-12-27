@@ -29,7 +29,8 @@ const seedDatabase = async () => {
         // 3. Create Admin
         await pool.query(`
             INSERT INTO admins (name, email, password) VALUES 
-            ('Super Admin', 'admin@example.com', 'adminpass')
+            ('Super Admin', 'admin@example.com', 'adminpass'),
+            ('sharath', 'sharath@gmail.com', '1234')
         `);
         console.log(`✅ Created Admin`);
 
