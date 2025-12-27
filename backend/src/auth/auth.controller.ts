@@ -86,8 +86,8 @@ export const login = async (req: Request, res: Response) => {
     res.cookie("jwt", token, {
       maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days in MS
       httpOnly: true,
-      sameSite: true, // As requested
-      secure: process.env.NODE_ENV !== "development", // Optional: strictly explicit secure flag
+      sameSite: process.env.NODE_ENV !== "development", // for my vitests to run
+      secure: process.env.NODE_ENV !== "development", // in production , https
     });
 
     res.status(200).json({

@@ -2,8 +2,7 @@ import { Router, type Router as RouterType } from "express";
 import {
     createMovie, updateMovie, deleteMovie,
     createShow, updateShow, deleteShow,
-    createTheatre, updateTheatre, deleteTheatre,
-    createUpcomingShow, updateUpcomingShow, deleteUpcomingShow
+    createTheatre, updateTheatre, deleteTheatre
 } from "./admin.controller.js";
 import { searchShows } from "../search/search.controller.js";
 
@@ -26,10 +25,5 @@ router.delete("/shows/:id", deleteShow);
 router.post("/theatres", createTheatre);
 router.put("/theatres/:id", updateTheatre);
 router.delete("/theatres/:id", deleteTheatre);
-
-// Upcoming Shows
-router.post("/upcoming-shows", createUpcomingShow);
-router.put("/upcoming-shows/:id", updateUpcomingShow);
-router.delete("/upcoming-shows/:id", deleteUpcomingShow);
 
 export default router;

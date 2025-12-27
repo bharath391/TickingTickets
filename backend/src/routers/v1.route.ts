@@ -8,7 +8,7 @@ const router: RouterType = Router();
 
 router.use("/auth", authRouter);
 router.use("/admin", adminAuthMiddleware, adminRouter);
-router.use("/search", userAuthMiddleware, searchRouter);
+router.use("/usersearch", userAuthMiddleware, searchRouter);
 // router.use("/payments",authMiddleware,paymentRouter);
 
 // Temporary test route to verify logger middleware
