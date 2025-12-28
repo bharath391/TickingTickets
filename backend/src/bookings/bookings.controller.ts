@@ -1,70 +1,127 @@
 import type { Request, Response } from "express";
 import { bookingService } from "./bookings.service.js";
-import { execQueryPool } from "../db/connect.js";
 
-export const confirmBooking = async (req: Request, res: Response) => {
-    try {
-        const { showId, paymentId, status } = req.body; // Webhook payload usually comes in body
-        // In a real scenario, you'd verify the webhook signature here.
-
-        if (status !== "success") {
-            // Handle payment failure (release seat)
-            // await bookingService.releaseSeat(...)
-            res.json({ received: true });
-            return;
-        }
-
-        // We probably need to extract userId from metadata sent to payment gateway
-        // For this abstraction, we'll assume it's in the body for now
-        const { userId } = req.body;
-
-        await bookingService.confirmBooking(userId, showId, paymentId);
-        res.json({ received: true });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
+/**
+ * POST /bookings/:showId/lock
+ * Body: { seats: [1, 2, 3] }
+ */
 export const lockSeats = async (req: Request, res: Response) => {
     try {
-        const { showId } = req.params;
-        const { seats } = req.body; // Expecting array of numbers e.g., [1, 2]
-        const userId = (req as any).user?.id; // Assuming auth middleware populates this
-        if (!showId || !seats || seats.length > 3) {
-            res.status(400).json({ msg: "Invalid showId or seats" });
+        const showId = req.params.showId;
+        const { seats } = req.body;
+        const userId = (req as any).user?.id as string | undefined;
+
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
             return;
         }
-        const show = await execQueryPool(`SELECT * FROM shows WHERE id = $1`, [showId]);
-        if (!show) {
-            res.status(404).json({ msg: "Show not found" });
+
+        if (!showId) {
+            res.status(400).json({ error: "Show ID is required" });
             return;
         }
-        //check seat count from redis : TODO or include this in lockseats
+
+        if (!seats || !Array.isArray(seats) || seats.length === 0 || seats.length > 3) {
+            res.status(400).json({ error: "Invalid seat selection (1-3 seats required)" });
+            return;
+        }
 
         const result = await bookingService.lockSeats(userId, showId, seats);
-        res.json(result);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(409).json(result); // 409 Conflict for unavailable seats
+        }
     } catch (error: any) {
+        console.error("[Controller] lockSeats error:", error);
         res.status(500).json({ error: error.message });
     }
 };
 
+/**
+ * POST /bookings/:showId/pay
+ */
 export const initiatePayment = async (req: Request, res: Response) => {
     try {
-        const { showId } = req.params;
-        const userId = (req as any).user?.id;
-        if (!showId || !userId) {
-            res.status(400).json({ msg: "Missing showId or userId" });
+        const showId = req.params.showId;
+        const userId = (req as any).user?.id as string | undefined;
+
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
             return;
         }
-        const query = "select * from shows where id = $1";
-        const queryResult = await execQueryPool(query, [showId]);
-        if (queryResult.rowCount == 0) {
-            res.status(404).json({ msg: "Show not found" });
+
+        if (!showId) {
+            res.status(400).json({ error: "Show ID is required" });
             return;
         }
+
         const result = await bookingService.initiatePayment(userId, showId);
-        res.json(result);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
     } catch (error: any) {
+        console.error("[Controller] initiatePayment error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * POST /bookings/:showId/cancel
+ */
+export const cancelBooking = async (req: Request, res: Response) => {
+    try {
+        const showId = req.params.showId;
+        const userId = (req as any).user?.id as string | undefined;
+
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        if (!showId) {
+            res.status(400).json({ error: "Show ID is required" });
+            return;
+        }
+
+        const result = await bookingService.cancelBooking(userId, showId);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error: any) {
+        console.error("[Controller] cancelBooking error:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * POST /bookings/webhook
+ * Body: { userId, showId, paymentId, status }
+ */
+export const confirmBooking = async (req: Request, res: Response) => {
+    try {
+        const { userId, showId, paymentId, status } = req.body;
+
+        // TODO: Verify webhook signature from payment gateway
+
+        if (status !== "success") {
+            // Payment failed - cancel the booking
+            await bookingService.cancelBooking(userId, showId);
+            res.json({ received: true, action: "cancelled" });
+            return;
+        }
+
+        const result = await bookingService.confirmBooking(userId, showId, paymentId);
+        res.json({ received: true, ...result });
+    } catch (error: any) {
+        console.error("[Controller] confirmBooking error:", error);
         res.status(500).json({ error: error.message });
     }
 };
