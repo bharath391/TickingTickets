@@ -102,24 +102,34 @@ export const cancelBooking = async (req: Request, res: Response) => {
 };
 
 /**
- * POST /bookings/webhook
- * Body: { userId, showId, paymentId, status }
+ * POST /bookings/confirm
+ * Body: { showId, paymentId, orderId, signature }
+ * Note: Authenticated endpoint called by Client after Razorpay success
  */
 export const confirmBooking = async (req: Request, res: Response) => {
     try {
-        const { userId, showId, paymentId, status } = req.body;
+        const userId = (req as any).user?.id as string | undefined;
+        // Expecting Razorpay details from client
+        const { showId, paymentId, orderId, signature } = req.body;
 
-        // TODO: Verify webhook signature from payment gateway
-
-        if (status !== "success") {
-            // Payment failed - cancel the booking
-            await bookingService.cancelBooking(userId, showId);
-            res.json({ received: true, action: "cancelled" });
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
             return;
         }
 
-        const result = await bookingService.confirmBooking(userId, showId, paymentId);
-        res.json({ received: true, ...result });
+        // Validate required fields
+        if (!showId || !paymentId || !orderId || !signature) {
+            res.status(400).json({ error: "Missing payment details. Required: showId, paymentId, orderId, signature" });
+            return;
+        }
+
+        const result = await bookingService.confirmBooking(userId, showId, paymentId, orderId, signature);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
     } catch (error: any) {
         console.error("[Controller] confirmBooking error:", error);
         res.status(500).json({ error: error.message });

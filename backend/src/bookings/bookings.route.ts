@@ -8,12 +8,14 @@ const router: RouterType = Router();
 router.post("/:showId/lock", lockSeats);
 
 // POST /api/v1/bookings/:showId/pay
+// TODO: send {showId,userId} -> so that payment webhook can 
+//send this data to me laater , which i can use to confirm booking
 router.post("/:showId/pay", initiatePayment);
 
 // POST /api/v1/bookings/:showId/cancel
 router.post("/:showId/cancel", cancelBooking);
 
-// POST /api/v1/bookings/webhook (Payment gateway callback)
-router.post("/webhook", confirmBooking);
+// POST /api/v1/bookings/confirm (Client-side payment confirmation)
+router.post("/confirm", confirmBooking);
 
 export default router;

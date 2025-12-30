@@ -1,8 +1,10 @@
-import type{ Request, Response } from "express";
+import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { execQueryPool } from "../db/connect.js";
 import tryCatch from "../middlewares/tryCatch.js";
+import { createSocketTicket } from "../redis/redis.tickets.js";
+import type { authReq } from "../types/types.js";
 
 // Signup Controller
 export const signup = async (req: Request, res: Response) => {
@@ -70,9 +72,9 @@ export const login = async (req: Request, res: Response) => {
     if (!isMatch) {
       // FALLBACK FOR DEVELOPMENT (Seed Data Support)
       if (password === user.password) {
-         // Allow match
+        // Allow match
       } else {
-         return res.status(400).json({ message: "Invalid credentials" });
+        return res.status(400).json({ message: "Invalid credentials" });
       }
     }
 
@@ -99,4 +101,20 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   }, req, res, "login");
+};
+
+// Generate Socket Ticket
+export const getSocketTicket = async (req: Request, res: Response) => {
+  await tryCatch(async (req: authReq, res: Response) => {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const ticket = await createSocketTicket(req.user.id);
+
+    res.status(200).json({
+      message: "Ticket generated",
+      ticket: ticket
+    });
+  }, req, res, "getSocketTicket");
 };

@@ -15,7 +15,7 @@ const initDatabase = async () => {
         const sql = await fs.readFile(schemaPath, 'utf8');
 
         console.log("🚀 Starting Database Initialization...");
-        
+
         // pool.query handles multiple statements in a single string
         await pool.query(sql);
 

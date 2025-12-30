@@ -12,6 +12,7 @@ import {
     clearUserSeats,
     isInStage1,
 } from "../redis/redis.sets.js";
+import { razorpayClient } from "../utils/razorpay.js";
 
 const STAGE1_DELAY_MS = 30 * 1000; // 30 seconds
 const STAGE2_DELAY_MS = 5 * 60 * 1000; // 5 minutes
@@ -47,7 +48,7 @@ export class BookingService {
      * Stage 2: Initiate Payment (5m Checkout)
      * Triggered when user clicks "Pay Now".
      */
-    async initiatePayment(userId: string, showId: string): Promise<{ success: boolean; message: string }> {
+    async initiatePayment(userId: string, showId: string): Promise<{ success: boolean; message: string; data?: any }> {
         console.log(`[BookingService] User ${userId} clicked PayNow for show ${showId}`);
 
         // 1. Verify user is in Stage 1
@@ -63,16 +64,43 @@ export class BookingService {
         // 3. Add job to Queue 2 (expires in 5min)
         await stage2Queue.add({ userId, showId }, { delay: STAGE2_DELAY_MS });
 
-        console.log(`[BookingService] User ${userId} moved to Stage 2. Payment window: 5 minutes.`);
-        return { success: true, message: "Payment window opened. Complete payment within 5 minutes." };
+        // 4. Create Razorpay Order
+        // For MVP, assuming fixed price of ₹500.00 -> 50000 paise
+        // In real app, calculate based on selected seats
+        const amount = 50000;
+        const receiptId = `receipt_${userId}_${showId}_${Date.now()}`;
+        const notes = { userId, showId };
+
+        try {
+            const order = await razorpayClient.createOrder(amount, receiptId, notes);
+            console.log(`[BookingService] User ${userId} moved to Stage 2. Payment Order Created: ${order.orderId}`);
+            return {
+                success: true,
+                message: "Payment window opened. Complete payment within 5 minutes.",
+                data: order
+            };
+        } catch (err) {
+            console.error("[BookingService] Failed to create Razorpay order", err);
+            return { success: false, message: "Failed to initiate payment gateway." };
+        }
     }
 
     /**
      * Confirm Booking (Payment Webhook)
      * Called when payment gateway confirms successful payment.
      */
-    async confirmBooking(userId: string, showId: string, paymentId: string): Promise<{ success: boolean; message: string }> {
-        console.log(`[BookingService] Payment confirmed for user ${userId}, show ${showId}, payment ${paymentId}`);
+    /**
+     * Confirm Booking (Payment Webhook or Client Success)
+     */
+    async confirmBooking(userId: string, showId: string, paymentId: string, orderId: string, signature: string): Promise<{ success: boolean; message: string }> {
+        console.log(`[BookingService] Verifying payment for user ${userId}, show ${showId}`);
+
+        // 0. Verify Signature
+        const isValid = razorpayClient.verifyPaymentSignature(orderId, paymentId, signature);
+        if (!isValid) {
+            console.error(`[BookingService] Invalid signature for user ${userId}, show ${showId}`);
+            return { success: false, message: "Payment verification failed (Invalid Signature)" };
+        }
 
         //Remove from Stage 2
         await removeFromStage2(userId, showId);

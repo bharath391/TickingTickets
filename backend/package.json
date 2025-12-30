@@ -26,6 +26,8 @@
   "dependencies": {
     "@types/bull": "^4.10.4",
     "@types/cookie-parser": "^1.4.10",
+    "@types/uuid": "^11.0.0",
+    "@types/ws": "^8.18.1",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "cookie-parser": "^1.4.7",
@@ -34,6 +36,9 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.16.3",
-    "redis": "^5.10.0"
+    "razorpay": "^2.9.6",
+    "redis": "^5.10.0",
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
   }
 }

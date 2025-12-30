@@ -23,6 +23,43 @@ export const stage1Queue = new Queue("stage1Queue", { redis: redisConfig });
 // Queue 2: 5-minute payment expiration
 export const stage2Queue = new Queue("stage2Queue", { redis: redisConfig });
 
+/**
+ * Add user to Stage 1 Queue (30s delay)
+ * @param userId 
+ * @param showId 
+ */
+import tryCatch from "../utils/tryCatch.js";
+
+/**
+ * Add user to Stage 1 Queue (30s delay)
+ * @param userId 
+ * @param showId 
+ */
+export const addToStage1Queue = async (userId: string, showId: string) => {
+    await tryCatch(async () => {
+        await stage1Queue.add(
+            { userId, showId },
+            { delay: 30000 } // 30 seconds
+        );
+        console.log(`[Queue1] Added job for user ${userId} with 30s delay`);
+    }, [userId, showId], "addToStage1Queue");
+}
+
+/**
+ * Add user to Stage 2 Queue (5 min delay)
+ * @param userId 
+ * @param showId 
+ */
+export const addToStage2Queue = async (userId: string, showId: string) => {
+    await tryCatch(async () => {
+        await stage2Queue.add(
+            { userId, showId },
+            { delay: 5 * 60 * 1000 } // 5 minutes
+        );
+        console.log(`[Queue2] Added job for user ${userId} with 5min delay`);
+    }, [userId, showId], "addToStage2Queue");
+}
+
 // ============================================
 // QUEUE 1 PROCESSOR (30s Hold Expiration)
 // ============================================
