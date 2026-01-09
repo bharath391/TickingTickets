@@ -30,9 +30,7 @@ wss.on("connection", (ws: any) => {
             //user auth successfull , check weather user is in any other room
             //broadcast locked seats to this user
             const lockedSeats = await getLockedSeats(ws.userId);
-            if (lockedSeats) {
-                ws.send(JSON.stringify({ type: "lockedSeats", data: lockedSeats }));
-            }
+            ws.send(JSON.stringify({ type: "lockedSeats", data: lockedSeats }));
         }
         catch (e) {
             console.log(e);

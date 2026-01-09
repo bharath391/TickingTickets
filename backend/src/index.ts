@@ -8,7 +8,7 @@ import loggerMiddleware from "./middlewares/logger.middleware.js";
 import { WebSocketServer } from "ws";
 
 dotenv.config();
-const app = express();
+const app = express()
 const httpServer = http.createServer(app);
 export const wss = new WebSocketServer({ server: httpServer });
 
