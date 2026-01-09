@@ -1,11 +1,8 @@
+import "dotenv/config";
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
 import { pool } from './connect.js';
-
-// Load environment variables for the pool
-dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

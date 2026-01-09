@@ -39,6 +39,7 @@ export const searchShows = async (req: Request, res: Response) => {
                 AND ($3::text IS NULL OR m.genres ILIKE '%' || $3 || '%') 
                 AND ($4::timestamp IS NULL OR s.show_time >= $4) 
                 AND ($5::timestamp IS NULL OR s.show_time <= $5)
+                AND ($8::uuid IS NULL OR s.id = $8)
             ORDER BY s.show_time ASC
             LIMIT $6 OFFSET $7;
         `;
@@ -50,7 +51,8 @@ export const searchShows = async (req: Request, res: Response) => {
             startDate || null,
             endDate || null,
             limitNum,
-            offset
+            offset,
+            req.query.showId || null
         ];
 
         const result = await execQueryPool(query, values);
@@ -63,7 +65,7 @@ export const searchShows = async (req: Request, res: Response) => {
                 limit: limitNum,
                 count: result.rowCount,
                 filters: {
-                    title, theatre, genre, startDate, endDate
+                    title, theatre, genre, startDate, endDate, showId: req.query.showId
                 }
             }
         });

@@ -10,7 +10,7 @@ const router: RouterType = Router();
 
 router.use("/auth", authRouter);
 router.use("/admin", adminAuthMiddleware, adminRouter);
-router.use("/usersearch", userAuthMiddleware, searchRouter);
+router.use("/usersearch", searchRouter);
 router.use("/bookings", userAuthMiddleware, bookingRouter);
 // router.use("/payments",authMiddleware,paymentRouter);
 

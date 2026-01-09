@@ -72,13 +72,10 @@ describe('Search Routes Integration Tests', () => {
         expect(Array.isArray(response.data.data)).toBe(true);
     });
 
-    it('should block unauthenticated access to search', async () => {
-        try {
-            await axios.get(`${BASE_URL}/usersearch`);
-            throw new Error('Should have failed');
-        } catch (error: any) {
-            expect(error.response?.status).toBe(401);
-        }
+    it('should allow unauthenticated access to search', async () => {
+        const response = await axios.get(`${BASE_URL}/usersearch?title=Inception`);
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.data.data)).toBe(true);
     });
 
     it('should block user from accessing admin search route', async () => {
