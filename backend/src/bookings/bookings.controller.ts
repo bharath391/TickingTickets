@@ -9,7 +9,7 @@ export const lockSeats = async (req: Request, res: Response) => {
     try {
         const showId = req.params.showId;
         const { seats } = req.body;
-        const userId = (req as any).user?.id as string | undefined;
+        const userId = (req as any).user?.userId as string | undefined;
 
         if (!userId) {
             res.status(401).json({ error: "Unauthorized" });
@@ -45,7 +45,7 @@ export const lockSeats = async (req: Request, res: Response) => {
 export const initiatePayment = async (req: Request, res: Response) => {
     try {
         const showId = req.params.showId;
-        const userId = (req as any).user?.id as string | undefined;
+        const userId = (req as any).user?.userId as string | undefined;
 
         if (!userId) {
             res.status(401).json({ error: "Unauthorized" });
@@ -76,7 +76,7 @@ export const initiatePayment = async (req: Request, res: Response) => {
 export const cancelBooking = async (req: Request, res: Response) => {
     try {
         const showId = req.params.showId;
-        const userId = (req as any).user?.id as string | undefined;
+        const userId = (req as any).user?.userId as string | undefined;
 
         if (!userId) {
             res.status(401).json({ error: "Unauthorized" });
@@ -108,7 +108,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
  */
 export const confirmBooking = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.id as string | undefined;
+        const userId = (req as any).user?.userId as string | undefined;
         // Expecting Razorpay details from client
         const { showId, paymentId, orderId, signature } = req.body;
 

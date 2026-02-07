@@ -13,14 +13,12 @@ const initDatabase = async () => {
 
         console.log("🚀 Starting Database Initialization...");
 
-        // pool.query handles multiple statements in a single string
         await pool.query(sql);
 
         console.log("✅ Database Schema Applied Successfully!");
     } catch (error) {
         console.error("❌ Error initializing database:", error);
     } finally {
-        // Close the pool to allow the process to exit
         await pool.end();
         console.log("👋 Database connection closed.");
     }

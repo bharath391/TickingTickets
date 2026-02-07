@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS shows (
     seat_count INTEGER DEFAULT 0,
     show_type VARCHAR(50) NOT NULL,
     show_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_live BOOLEAN DEFAULT FALSE, 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -65,7 +66,9 @@ CREATE TABLE IF NOT EXISTS bookings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     show_id UUID REFERENCES shows(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'confirmed', 'cancelled'
+    seats INTEGER[] NOT NULL,
+    payment_id VARCHAR(100), -- Razorpay payment ID
+    status VARCHAR(20) DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

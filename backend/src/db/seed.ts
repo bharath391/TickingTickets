@@ -11,10 +11,8 @@ const seedDatabase = async () => {
     try {
         console.log("🌱 Starting Database Seed...");
 
-        // 1. Clear existing data (Optional, but good for resetting)
         await pool.query('TRUNCATE TABLE bookings, shows, theatres, movies, users, admins CASCADE');
 
-        // 2. Create Users
         const users = await pool.query(`
             INSERT INTO users (name, email, password) VALUES 
             ('Alice User', 'alice@example.com', 'password123'),
@@ -23,7 +21,6 @@ const seedDatabase = async () => {
         `);
         console.log(`✅ Created ${users.rowCount} Users`);
 
-        // 3. Create Admin
         await pool.query(`
             INSERT INTO admins (name, email, password) VALUES 
             ('Super Admin', 'admin@example.com', 'adminpass'),
@@ -31,7 +28,6 @@ const seedDatabase = async () => {
         `);
         console.log(`✅ Created Admin`);
 
-        // 4. Create Movies
         const movies = await pool.query(`
             INSERT INTO movies (title, description, genres, price) VALUES 
             ('Inception', 'A thief who steals corporate secrets through the use of dream-sharing technology.', 'Sci-Fi, Action', 250),
@@ -43,7 +39,6 @@ const seedDatabase = async () => {
         `);
         console.log(`✅ Created ${movies.rowCount} Movies`);
 
-        // 5. Create Theatres
         const theatres = await pool.query(`
             INSERT INTO theatres (name, location) VALUES 
             ('PVR Cinemas', 'Downtown Mall'),
@@ -52,8 +47,6 @@ const seedDatabase = async () => {
         `);
         console.log(`✅ Created ${theatres.rowCount} Theatres`);
 
-        // 6. Create Shows
-        // Mix and match movies and theatres
         const showValues = [];
         const showTypes = ['Morning', 'Matinee', 'Evening', 'Late Night'];
         
@@ -72,8 +65,6 @@ const seedDatabase = async () => {
                     showTime.setDate(showTime.getDate() + 1);
                     showTime.setHours(10 + Math.floor(Math.random() * 10), 0, 0);
 
-                    // We need to use parameterized query in the loop or build a massive string
-                    // For simplicity in seeding, I'll execute one by one
                     await pool.query(`
                         INSERT INTO shows (movie_id, theatre_id, seat_count, show_type, show_time)
                         VALUES ($1, $2, $3, $4, $5)

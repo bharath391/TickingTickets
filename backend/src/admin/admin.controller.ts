@@ -1,11 +1,20 @@
 import type { Request, Response } from "express";
 import { execQueryPool } from "../db/connect.js";
+import {
+    initializeSeatsForShow,
+    getActiveBookingsForShow,
+    removeFromStage1,
+    removeFromStage2,
+    getUserSeats,
+    unlockSeats,
+    clearUserSeats,
+    cleanupShowData
+} from "../redis/redis.sets.js";
 import tryCatch from "../middlewares/tryCatch.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 // ------------------- MOVIES -------------------
-
 export const createMovie = async (req: Request, res: Response) => {
     await tryCatch(async (req: Request, res: Response) => {
         const { title, genres, description, price } = req.body;
@@ -131,6 +140,107 @@ export const deleteShow = async (req: Request, res: Response) => {
     }, req, res, "deleteShow");
 };
 
+/**
+ * Go Live: Initialize seats in Redis for booking
+ * POST /admin/shows/:id/go-live
+ */
+export const goLiveShow = async (req: Request, res: Response) => {
+    await tryCatch(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ message: "Show ID is required" });
+        }
+
+        // 1. Get show details from DB
+        const showResult = await execQueryPool("SELECT * FROM shows WHERE id = $1", [id]);
+        if (showResult.rowCount === 0) {
+            return res.status(404).json({ message: "Show not found" });
+        }
+
+        const show = showResult.rows[0];
+        const seatCount = show.seat_count;
+
+        // Check if already live (prevent double initialization)
+        if (show.is_live) {
+            return res.status(400).json({ message: "Show is already live" });
+        }
+
+        if (!seatCount || seatCount <= 0) {
+            return res.status(400).json({ message: "Invalid seat count for this show" });
+        }
+
+        // 2. Initialize seats in Redis
+        await initializeSeatsForShow(id, seatCount);
+
+        // 3. Mark show as live in DB
+        await execQueryPool("UPDATE shows SET is_live = true WHERE id = $1", [id]);
+
+        res.status(200).json({
+            message: `Show is now LIVE! ${seatCount} seats initialized for booking.`,
+            showId: id,
+            seatCount: seatCount
+        });
+    }, req, res, "goLiveShow");
+};
+
+/**
+ * Stop Booking: Close booking and cancel all in-progress bookings
+ * POST /admin/shows/:id/stop-booking
+ */
+export const stopBooking = async (req: Request, res: Response) => {
+    await tryCatch(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ message: "Show ID is required" });
+        }
+
+        // 1. Check if show exists
+        const showResult = await execQueryPool("SELECT * FROM shows WHERE id = $1", [id]);
+        if (showResult.rowCount === 0) {
+            return res.status(404).json({ message: "Show not found" });
+        }
+
+        // 2. Set is_live = false in DB
+        await execQueryPool("UPDATE shows SET is_live = false WHERE id = $1", [id]);
+
+        // 3. Cancel all in-progress bookings for this show
+        const activeBookings = await getActiveBookingsForShow(id);
+        let cancelledCount = 0;
+
+        for (const booking of activeBookings) {
+            const { userId, stage } = booking;
+
+            // Get user's locked seats
+            const seatIds = await getUserSeats(userId, id);
+
+            if (seatIds) {
+                // Unlock the seats (return to available)
+                await unlockSeats(id, seatIds);
+                await clearUserSeats(userId, id);
+            }
+
+            // Remove from stage tracking
+            if (stage === 1) {
+                await removeFromStage1(userId, id);
+            } else {
+                await removeFromStage2(userId, id);
+            }
+
+            cancelledCount++;
+            console.log(`[Admin] Cancelled booking for user ${userId} (was in stage ${stage})`);
+        }
+
+        // 4. Clean up all Redis data for this show
+        await cleanupShowData(id);
+
+        res.status(200).json({
+            message: `Booking closed. ${cancelledCount} in-progress bookings cancelled.`,
+            showId: id,
+            cancelledBookings: cancelledCount
+        });
+    }, req, res, "stopBooking");
+};
+
 // ------------------- THEATRES -------------------
 
 export const createTheatre = async (req: Request, res: Response) => {
@@ -223,7 +333,7 @@ export const adminLogin = async (req: Request, res: Response) => {
 
         if (!isMatch) {
             // FALLBACK FOR DEVELOPMENT (Seed Data Support)
-            if (password === admin.password) {
+            if (process.env.NODE_ENV === 'development' && password === admin.password) {
                 // Allow match
             } else {
                 return res.status(400).json({ message: "Invalid credentials" });
@@ -232,7 +342,7 @@ export const adminLogin = async (req: Request, res: Response) => {
 
         // Generate JWT
         const token = jwt.sign(
-            { userId: admin.id, email: admin.email },
+            { adminId: admin.id, email: admin.email },
             process.env.JWT_SECRET || "dev_secret",
             { expiresIn: "15d" }
         );
@@ -246,8 +356,8 @@ export const adminLogin = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: "Admin login successful",
-            user: {
-                id: admin.id,
+            admin: {
+                adminId: admin.id,
                 name: admin.name,
                 email: admin.email,
             },

@@ -1,10 +1,15 @@
 import type { Request } from "express";
 
-interface authReq extends Request{
-    user?:{
-        id:string,
-        email:string,
+interface authReq extends Request {
+    user?: {
+        userId: string,
+        email: string,
+    },
+
+    admin?: {
+        adminId: string,
+        email: string,
     }
 }
 
-export type {authReq};
+export type { authReq };

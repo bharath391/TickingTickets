@@ -1,9 +1,9 @@
-import {type Response,type NextFunction} from "express";
-import type {authReq} from "../types/types.js";
+import { type Response, type NextFunction } from "express";
+import type { authReq } from "../types/types.js";
 import jwt, { type JwtPayload } from "jsonwebtoken";
-import {execQueryPool} from "../db/connect.js";
+import { execQueryPool } from "../db/connect.js";
 
-const userAuthMiddleware = async(
+const userAuthMiddleware = async (
   req: authReq,
   res: Response,
   next: NextFunction
@@ -22,58 +22,58 @@ const userAuthMiddleware = async(
 
     // decoded payload is { userId, email, ... }
     const userId = (decoded as any).userId;
-    
+
     const query = "select * from users where id=$1";
     const values = [userId];
     const result = await execQueryPool(query, values);
     if (result.rowCount === 0) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    
+
     req.user = {
-        id: userId,
-        email: (decoded as any).email
-    }; 
+      userId: userId,
+      email: (decoded as any).email
+    };
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 
-const adminAuthMiddleware = async (req:authReq,res:Response,next:NextFunction) => {
-    try{
-        //check user jwt and assign user to incoming req = authReq
-        const token = req.cookies?.jwt;
-        
-        if (!token) {
-          return res.status(401).json({ message: "Unauthorized" });
-        }  
-        const decoded = jwt.verify(
-          token,
-          process.env.JWT_SECRET!
-        ) as JwtPayload;
+const adminAuthMiddleware = async (req: authReq, res: Response, next: NextFunction) => {
+  try {
+    //check user jwt and assign user to incoming req = authReq
+    const token = req.cookies?.jwt;
 
-        const userId = (decoded as any).userId;
-
-        const query = "select * from admins where id=$1";
-        const values = [userId];
-        const result = await execQueryPool(query, values);
-        if (result.rowCount === 0) {
-          return res.status(401).json({ message: "Unauthorized" });
-        }
-        
-        req.user = {
-            id: userId,
-            email: (decoded as any).email
-        }; 
-        next();
-    }catch(e){
-        console.log("Error in auth middleware ");
-        console.log(e);
-        return res.status(401).json({ message: "Unauthorized" });
-
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
-    
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET!
+    ) as JwtPayload;
+
+    const adminId = (decoded as any).adminId;
+
+    const query = "select * from admins where id=$1";
+    const values = [adminId];
+    const result = await execQueryPool(query, values);
+    if (result.rowCount === 0) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    req.admin = {
+      adminId: adminId,
+      email: (decoded as any).email
+    };
+    next();
+  } catch (e) {
+    console.log("Error in auth middleware ");
+    console.log(e);
+    return res.status(401).json({ message: "Unauthorized" });
+
+  }
+
 }
 
-export {userAuthMiddleware,adminAuthMiddleware};
+export { userAuthMiddleware, adminAuthMiddleware };

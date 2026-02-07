@@ -4,5 +4,6 @@ export default async function tryCatch(fn: Function, functionParams: any[], cont
     } catch (e) {
         console.log("Error in executing function ", controllerName);
         console.log(e);
+        throw e;
     }
 }

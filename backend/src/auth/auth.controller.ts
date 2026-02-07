@@ -6,11 +6,37 @@ import tryCatch from "../middlewares/tryCatch.js";
 import { createSocketTicket } from "../redis/redis.tickets.js";
 import type { authReq } from "../types/types.js";
 
+// Password Policy Validator
+const validatePassword = (password: string): { valid: boolean; message: string } => {
+  const minLength = 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  if (password.length < minLength) {
+    return { valid: false, message: `Password must be at least ${minLength} characters` };
+  }
+  if (!hasUppercase) {
+    return { valid: false, message: "Password must contain at least one uppercase letter" };
+  }
+  if (!hasLowercase) {
+    return { valid: false, message: "Password must contain at least one lowercase letter" };
+  }
+  if (!hasNumber) {
+    return { valid: false, message: "Password must contain at least one number" };
+  }
+  if (!hasSpecialChar) {
+    return { valid: false, message: "Password must contain at least one special character (!@#$%^&*)" };
+  }
+
+  return { valid: true, message: "Password is strong" };
+};
+
 // Signup Controller
 export const signup = async (req: Request, res: Response) => {
   await tryCatch(async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
-    console.log(req.body);
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Please provide all fields" });
@@ -19,6 +45,12 @@ export const signup = async (req: Request, res: Response) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Password policy validation
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+      return res.status(400).json({ message: passwordCheck.message });
     }
 
     // Check if user already exists
@@ -71,7 +103,7 @@ export const login = async (req: Request, res: Response) => {
 
     if (!isMatch) {
       // FALLBACK FOR DEVELOPMENT (Seed Data Support)
-      if (password === user.password) {
+      if (process.env.NODE_ENV === 'development' && password === user.password) {
         // Allow match
       } else {
         return res.status(400).json({ message: "Invalid credentials" });
@@ -81,7 +113,7 @@ export const login = async (req: Request, res: Response) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || "dev_secret",
+      process.env.JWT_SECRET!,
       { expiresIn: "15d" }
     );
 
@@ -106,11 +138,11 @@ export const login = async (req: Request, res: Response) => {
 // Generate Socket Ticket
 export const getSocketTicket = async (req: Request, res: Response) => {
   await tryCatch(async (req: authReq, res: Response) => {
-    if (!req.user || !req.user.id) {
+    if (!req.user || !req.user.userId) {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const ticket = await createSocketTicket(req.user.id);
+    const ticket = await createSocketTicket(req.user.userId);
 
     res.status(200).json({
       message: "Ticket generated",

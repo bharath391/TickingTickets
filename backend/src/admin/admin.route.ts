@@ -1,15 +1,14 @@
 import { Router, type Router as RouterType } from "express";
 import {
-    createMovie, updateMovie, deleteMovie,
-    createShow, updateShow, deleteShow,
+    adminLogin, createMovie, updateMovie, deleteMovie,
+    createShow, updateShow, deleteShow, goLiveShow, stopBooking,
     createTheatre, updateTheatre, deleteTheatre
 } from "./admin.controller.js";
-import { searchShows } from "../search/search.controller.js";
 
 const router: RouterType = Router();
 
-// Search
-router.get("/search", searchShows);
+//auth
+router.post("/login", adminLogin);
 
 // Movies
 router.post("/movies", createMovie);
@@ -20,6 +19,8 @@ router.delete("/movies/:id", deleteMovie);
 router.post("/shows", createShow);
 router.put("/shows/:id", updateShow);
 router.delete("/shows/:id", deleteShow);
+router.post("/shows/:id/go-live", goLiveShow);       // Start booking
+router.post("/shows/:id/stop-booking", stopBooking); // Stop booking
 
 // Theatres
 router.post("/theatres", createTheatre);

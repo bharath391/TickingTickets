@@ -6,8 +6,12 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "lint": "tsc --noEmit",
+    "deploy": "sh deploy_ecr.sh",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:init": "node dist/db/init.js",
+    "db:seed": "node dist/db/seed.js"
   },
   "keywords": [],
   "author": "",
@@ -15,19 +19,17 @@
   "packageManager": "pnpm@10.19.0",
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.3",
     "@types/pg": "^8.16.0",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@types/bull": "^4.10.4",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/uuid": "^11.0.0",
-    "@types/ws": "^8.18.1",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "cookie-parser": "^1.4.7",

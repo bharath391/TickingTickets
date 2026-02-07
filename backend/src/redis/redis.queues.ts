@@ -9,32 +9,17 @@ import {
     clearUserSeats,
 } from "./redis.sets.js";
 
-// ============================================
 // QUEUE CONFIGURATION
-// ============================================
 const redisConfig = {
     host: process.env.REDIS_HOST || "localhost",
     port: parseInt(process.env.REDIS_PORT || "6379"),
 };
 
-// Queue 1: 30-second hold expiration
 export const stage1Queue = new Queue("stage1Queue", { redis: redisConfig });
-
-// Queue 2: 5-minute payment expiration
 export const stage2Queue = new Queue("stage2Queue", { redis: redisConfig });
 
-/**
- * Add user to Stage 1 Queue (30s delay)
- * @param userId 
- * @param showId 
- */
 import tryCatch from "../utils/tryCatch.js";
 
-/**
- * Add user to Stage 1 Queue (30s delay)
- * @param userId 
- * @param showId 
- */
 export const addToStage1Queue = async (userId: string, showId: string) => {
     await tryCatch(async () => {
         await stage1Queue.add(
@@ -45,11 +30,6 @@ export const addToStage1Queue = async (userId: string, showId: string) => {
     }, [userId, showId], "addToStage1Queue");
 }
 
-/**
- * Add user to Stage 2 Queue (5 min delay)
- * @param userId 
- * @param showId 
- */
 export const addToStage2Queue = async (userId: string, showId: string) => {
     await tryCatch(async () => {
         await stage2Queue.add(
@@ -60,9 +40,7 @@ export const addToStage2Queue = async (userId: string, showId: string) => {
     }, [userId, showId], "addToStage2Queue");
 }
 
-// ============================================
 // QUEUE 1 PROCESSOR (30s Hold Expiration)
-// ============================================
 stage1Queue.process(async (job) => {
     const { userId, showId } = job.data;
     console.log(`[Queue1] Processing expiration for user ${userId}, show ${showId}`);
@@ -89,9 +67,7 @@ stage1Queue.process(async (job) => {
     }
 });
 
-// ============================================
 // QUEUE 2 PROCESSOR (5min Payment Expiration)
-// ============================================
 stage2Queue.process(async (job) => {
     const { userId, showId } = job.data;
     console.log(`[Queue2] Processing expiration for user ${userId}, show ${showId}`);
