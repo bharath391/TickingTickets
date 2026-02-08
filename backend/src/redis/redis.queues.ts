@@ -18,28 +18,6 @@ const redisConfig = {
 export const stage1Queue = new Queue("stage1Queue", { redis: redisConfig });
 export const stage2Queue = new Queue("stage2Queue", { redis: redisConfig });
 
-import tryCatch from "../utils/tryCatch.js";
-
-export const addToStage1Queue = async (userId: string, showId: string) => {
-    await tryCatch(async () => {
-        await stage1Queue.add(
-            { userId, showId },
-            { delay: 30000 } // 30 seconds
-        );
-        console.log(`[Queue1] Added job for user ${userId} with 30s delay`);
-    }, [userId, showId], "addToStage1Queue");
-}
-
-export const addToStage2Queue = async (userId: string, showId: string) => {
-    await tryCatch(async () => {
-        await stage2Queue.add(
-            { userId, showId },
-            { delay: 5 * 60 * 1000 } // 5 minutes
-        );
-        console.log(`[Queue2] Added job for user ${userId} with 5min delay`);
-    }, [userId, showId], "addToStage2Queue");
-}
-
 // QUEUE 1 PROCESSOR (30s Hold Expiration)
 stage1Queue.process(async (job) => {
     const { userId, showId } = job.data;
@@ -54,12 +32,12 @@ stage1Queue.process(async (job) => {
 
         const seatIds = await getUserSeats(userId, showId);
         if (seatIds) {
-            await unlockSeats(showId, seatIds);
+            await unlockSeats(showId, seatIds); // broadcast happens in unlockSeats()
             await clearUserSeats(userId, showId);
         }
         await removeFromStage1(userId, showId);
 
-        return { status: "unlocked", reason: "30s timeout" };
+        return { status: "unlocked", reason: "3min timeout" };
     } else {
         // User clicked PayNow → Already moved to Stage 2, do nothing
         console.log(`[Queue1] User ${userId} already in Stage 2. No action needed.`);
@@ -81,13 +59,12 @@ stage2Queue.process(async (job) => {
 
         const seatIds = await getUserSeats(userId, showId);
         if (seatIds) {
-            await unlockSeats(showId, seatIds);
+            await unlockSeats(showId, seatIds); // broadcast happens in unlockSeats()
             await clearUserSeats(userId, showId);
         }
         await removeFromStage2(userId, showId);
 
-        // TODO: Optionally notify user via WebSocket or store timeout status
-        return { status: "timeout", reason: "5min payment timeout" };
+        return { status: "timeout", reason: "7min payment timeout" };
     } else {
         // Payment completed → Already removed from Stage 2, do nothing
         console.log(`[Queue2] User ${userId} payment completed. No action needed.`);

@@ -10,6 +10,7 @@ import {
     clearUserSeats,
     cleanupShowData
 } from "../redis/redis.sets.js";
+import { createShowRoom, destroyShowRoom } from "../sockets/websocket.js";
 import tryCatch from "../middlewares/tryCatch.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -172,7 +173,10 @@ export const goLiveShow = async (req: Request, res: Response) => {
         // 2. Initialize seats in Redis
         await initializeSeatsForShow(id, seatCount);
 
-        // 3. Mark show as live in DB
+        // 3. Create WebSocket room for this show
+        createShowRoom(id);
+
+        // 4. Mark show as live in DB
         await execQueryPool("UPDATE shows SET is_live = true WHERE id = $1", [id]);
 
         res.status(200).json({
@@ -232,6 +236,9 @@ export const stopBooking = async (req: Request, res: Response) => {
 
         // 4. Clean up all Redis data for this show
         await cleanupShowData(id);
+
+        // 5. Destroy WebSocket room (notifies all clients with 'show-closed' event)
+        destroyShowRoom(id);
 
         res.status(200).json({
             message: `Booking closed. ${cancelledCount} in-progress bookings cancelled.`,

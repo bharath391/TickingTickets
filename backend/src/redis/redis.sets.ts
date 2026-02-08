@@ -1,29 +1,9 @@
 import redisClient from "./redis.client.js";
 import tryCatch from "../utils/tryCatch.js";
+import { broadcastToShow } from "../sockets/websocket.js";
 
 // seats:{showId}       - Available seats
 // lockedSeats:{showId} - Currently locked seats
-
-export async function addToRoom(userId: string): Promise<void> {
-    await tryCatch(async () => {
-        const key = `userInRoom`;
-        await redisClient.sAdd(key, userId);
-    }, [userId], "addToRoom");
-
-}
-export async function userInRoom(userId: string): Promise<Boolean> {
-    return await tryCatch(async () => {
-        const key = `userInRoom`;
-        const isMember = await redisClient.sIsMember(key, userId);
-        return Boolean(isMember);
-    }, [userId], "userInRoom");
-}
-export async function removeFromRoom(userId: string): Promise<void> {
-    await tryCatch(async () => {
-        const key = `userInRoom`;
-        await redisClient.sRem(key, userId);
-    }, [userId], "removeFromRoom");
-}
 
 export async function initializeSeatsForShow(showId: string, totalSeats: number): Promise<void> {
     await tryCatch(async () => {
@@ -77,6 +57,10 @@ export async function tryLockSeats(showId: string, seatIds: number[]): Promise<b
         }
 
         console.log(`[Redis] Atomically locked seats ${seatIds} for show ${showId}`);
+
+        // Broadcast seat state update to all watching clients
+        broadcastToShow(showId);
+
         return true;
     } catch (error) {
         console.error(`[Redis] Error in tryLockSeats:`, error);
@@ -93,6 +77,9 @@ export async function unlockSeats(showId: string, seatIds: number[]): Promise<vo
             await redisClient.sMove(lockedKey, availableKey, String(seatId));
         }
         console.log(`[Redis] Unlocked seats ${seatIds} for show ${showId}`);
+
+        // Broadcast seat state update to all watching clients
+        broadcastToShow(showId);
     }, [showId, seatIds], "unlockSeats");
 }
 
@@ -103,6 +90,9 @@ export async function markSeatsAsSold(showId: string, seatIds: number[]): Promis
         await redisClient.sRem(lockedKey, String(seatId));
     }
     console.log(`[Redis] Marked seats ${seatIds} as SOLD for show ${showId}`);
+
+    // Broadcast seat state update to all watching clients
+    broadcastToShow(showId);
 }
 
 // stage1Lock - Users in 3min hold window
@@ -195,8 +185,23 @@ export async function clearUserSeats(userId: string, showId: string): Promise<vo
     await redisClient.del(`userSeats:${userId}:${showId}`);
 }
 
-export async function getLockedSeats(userId: string): Promise<number[]> {
-    // This is a placeholder to fix build errors. 
-    // Real implementation would need to track user's active shows.
-    return [];
+//Get complete seat state for a show (used by WebSocket broadcasts)
+export async function getShowSeatState(showId: string): Promise<{
+    showId: string;
+    available: number[];
+    locked: number[];
+}> {
+    const availableKey = `seats:${showId}`;
+    const lockedKey = `lockedSeats:${showId}`;
+
+    const [available, locked] = await Promise.all([
+        redisClient.sMembers(availableKey),
+        redisClient.sMembers(lockedKey),
+    ]);
+
+    return {
+        showId,
+        available: available.map(Number).sort((a, b) => a - b),
+        locked: locked.map(Number).sort((a, b) => a - b),
+    };
 }

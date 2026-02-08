@@ -55,11 +55,13 @@ export class BookingService {
         // 3. Add user to Stage 1 tracking
         await addToStage1(userId, showId);
 
-        // 4. Add job to Queue 1 (expires in 30s)
+        // 4. Add job to Queue 1 (expires in 3min)
         await stage1Queue.add({ userId, showId }, { delay: STAGE1_DELAY_MS });
 
-        console.log(`[BookingService] Seats ${seatIds} locked for user ${userId}. Expires in 30s.`);
-        return { success: true, message: "Seats locked for 30 seconds. Click PayNow to proceed." };
+        // Note: broadcast happens automatically in tryLockSeats()
+
+        console.log(`[BookingService] Seats ${seatIds} locked for user ${userId}. Expires in 3min.`);
+        return { success: true, message: "Seats locked for 3 minutes. Click PayNow to proceed." };
     }
 
     /**
@@ -158,6 +160,8 @@ export class BookingService {
             // Note: Seats are already marked sold in Redis, so booking is effectively complete
             // In production, you might want to add a recovery mechanism here
         }
+
+        // Note: broadcast happens automatically in markSeatsAsSold()
 
         return { success: true, message: "Booking confirmed successfully!" };
     }

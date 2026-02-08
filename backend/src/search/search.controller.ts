@@ -4,14 +4,14 @@ import { execQueryPool } from "../db/connect.js";
 
 export const searchShows = async (req: Request, res: Response) => {
     await tryCatch(async (req: Request, res: Response) => {
-        const { 
-            title, 
-            theatre, 
-            genre, 
-            startDate, 
-            endDate, 
+        const {
+            title,
+            theatre,
+            genre,
+            startDate,
+            endDate,
             limit,
-            page 
+            page
         } = req.query;
 
         const limitNum = Number(limit) || 10;
@@ -24,6 +24,7 @@ export const searchShows = async (req: Request, res: Response) => {
                 s.show_time,
                 s.seat_count,
                 s.show_type,
+                s.is_live,
                 m.title AS movie_title,
                 m.genres AS movie_genre,
                 m.description AS movie_desc,
@@ -57,8 +58,8 @@ export const searchShows = async (req: Request, res: Response) => {
 
         const result = await execQueryPool(query, values);
 
-        res.status(200).json({ 
-            message: "Search results fetched successfully", 
+        res.status(200).json({
+            message: "Search results fetched successfully",
             data: result.rows,
             meta: {
                 page: pageNum,
