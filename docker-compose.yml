@@ -32,6 +32,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ticking-tickets-backend
+    env_file:
+      - ./backend/.env
     environment:
       - DB_HOST=db
       - DB_PORT=5432
@@ -39,8 +41,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
       - DB_NAME=${DB_NAME:-ticking_tickets}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret}
       - PORT=3000
+
     ports:
       - "4000:3000"
     depends_on:
