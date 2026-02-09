@@ -1,0 +1,30 @@
+{
+  "name": "tests",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "API tests for TickingTickets",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test:auth": "NODE_OPTIONS='--experimental-vm-modules' jest auth.test.ts",
+    "test:admin": "NODE_OPTIONS='--experimental-vm-modules' jest admin.test.ts",
+    "test:search": "NODE_OPTIONS='--experimental-vm-modules' jest search.test.ts",
+    "test:bookings": "NODE_OPTIONS='--experimental-vm-modules' jest bookings.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.27.0",
+  "dependencies": {
+    "axios": "^1.13.5"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,19 +1,22 @@
+import "dotenv/config";
 import express from "express";
 import http from "http";
-import dotenv from "dotenv";
+
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import v1Router from "./routers/v1.route.js";
 import loggerMiddleware from "./middlewares/logger.middleware.js";
 import { WebSocketServer } from "ws";
 import { validateEnv } from "./utils/validateEnv.js";
+import { initWebSocket } from "./sockets/websocket.js";
 
-dotenv.config();
+
 validateEnv();
 
 const app = express()
 const httpServer = http.createServer(app);
 export const wss = new WebSocketServer({ server: httpServer });
+initWebSocket(wss);
 
 app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",

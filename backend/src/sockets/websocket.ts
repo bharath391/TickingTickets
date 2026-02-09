@@ -1,5 +1,4 @@
-import { WebSocket } from "ws";
-import { wss } from "../index.js";
+import { WebSocket, WebSocketServer } from "ws";
 import redisClient from "../redis/redis.client.js";
 import { validateSocketTicket } from "../redis/redis.tickets.js";
 import { getUserSeats } from "../redis/redis.sets.js";
@@ -174,100 +173,102 @@ interface AuthenticatedWebSocket extends WebSocket {
     isAuthenticated?: boolean;
 }
 
-wss.on("connection", (ws: AuthenticatedWebSocket) => {
-    console.log("[WS] Client connected (unauthenticated)");
+export function initWebSocket(wss: WebSocketServer): void {
+    wss.on("connection", (ws: AuthenticatedWebSocket) => {
+        console.log("[WS] Client connected (unauthenticated)");
 
-    // Track which shows this client is subscribed to
-    const subscribedShows: Set<string> = new Set();
+        // Track which shows this client is subscribed to
+        const subscribedShows: Set<string> = new Set();
 
-    ws.on("message", async (raw: Buffer) => {
-        try {
-            const msg = JSON.parse(raw.toString());
+        ws.on("message", async (raw: Buffer) => {
+            try {
+                const msg = JSON.parse(raw.toString());
 
-            // Handle authentication (must be done first)
-            if (msg.event === "auth" && msg.data?.ticket) {
-                const { ticket } = msg.data;
+                // Handle authentication (must be done first)
+                if (msg.event === "auth" && msg.data?.ticket) {
+                    const { ticket } = msg.data;
 
-                // Validate and consume ticket (one-time use)
-                const userId = await validateSocketTicket(ticket);
+                    // Validate and consume ticket (one-time use)
+                    const userId = await validateSocketTicket(ticket);
 
-                if (!userId) {
+                    if (!userId) {
+                        ws.send(JSON.stringify({
+                            event: "auth-error",
+                            data: { message: "Invalid or expired ticket" }
+                        }));
+                        return;
+                    }
+
+                    // Mark connection as authenticated
+                    ws.userId = userId;
+                    ws.isAuthenticated = true;
+
                     ws.send(JSON.stringify({
-                        event: "auth-error",
-                        data: { message: "Invalid or expired ticket" }
+                        event: "auth-success",
+                        data: { userId }
+                    }));
+
+                    console.log(`[WS] Client authenticated as user ${userId}`);
+                    return;
+                }
+
+                // All other events require authentication
+                if (!ws.isAuthenticated) {
+                    ws.send(JSON.stringify({
+                        event: "error",
+                        data: { message: "Not authenticated. Send auth event with ticket first." }
                     }));
                     return;
                 }
 
-                // Mark connection as authenticated
-                ws.userId = userId;
-                ws.isAuthenticated = true;
+                // Handle join-show (requires auth)
+                if (msg.event === "join-show" && msg.data?.showId) {
+                    const { showId } = msg.data;
 
-                ws.send(JSON.stringify({
-                    event: "auth-success",
-                    data: { userId }
-                }));
+                    // Add to room (returns false if show not live)
+                    const joined = joinShowRoom(ws, showId);
+                    if (!joined) return;
 
-                console.log(`[WS] Client authenticated as user ${userId}`);
-                return;
-            }
+                    subscribedShows.add(showId);
 
-            // All other events require authentication
-            if (!ws.isAuthenticated) {
-                ws.send(JSON.stringify({
-                    event: "error",
-                    data: { message: "Not authenticated. Send auth event with ticket first." }
-                }));
-                return;
-            }
+                    // Send current state immediately
+                    const state = await getShowSeatState(showId);
+                    ws.send(JSON.stringify({ event: "seat-state", data: state }));
 
-            // Handle join-show (requires auth)
-            if (msg.event === "join-show" && msg.data?.showId) {
-                const { showId } = msg.data;
-
-                // Add to room (returns false if show not live)
-                const joined = joinShowRoom(ws, showId);
-                if (!joined) return;
-
-                subscribedShows.add(showId);
-
-                // Send current state immediately
-                const state = await getShowSeatState(showId);
-                ws.send(JSON.stringify({ event: "seat-state", data: state }));
-
-                // Session recovery: Send user their previously locked seats (if any)
-                const myLockedSeats = await getUserSeats(ws.userId!, showId);
-                if (myLockedSeats && myLockedSeats.length > 0) {
-                    ws.send(JSON.stringify({
-                        event: "your-locked-seats",
-                        data: { seats: myLockedSeats }
-                    }));
-                    console.log(`[WS] Sent recovery: User ${ws.userId} has seats ${myLockedSeats} locked`);
+                    // Session recovery: Send user their previously locked seats (if any)
+                    const myLockedSeats = await getUserSeats(ws.userId!, showId);
+                    if (myLockedSeats && myLockedSeats.length > 0) {
+                        ws.send(JSON.stringify({
+                            event: "your-locked-seats",
+                            data: { seats: myLockedSeats }
+                        }));
+                        console.log(`[WS] Sent recovery: User ${ws.userId} has seats ${myLockedSeats} locked`);
+                    }
                 }
-            }
 
-            // Handle leave-show
-            if (msg.event === "leave-show" && msg.data?.showId) {
-                const { showId } = msg.data;
-                leaveShowRoom(ws, showId);
-                subscribedShows.delete(showId);
+                // Handle leave-show
+                if (msg.event === "leave-show" && msg.data?.showId) {
+                    const { showId } = msg.data;
+                    leaveShowRoom(ws, showId);
+                    subscribedShows.delete(showId);
+                }
+            } catch (error) {
+                console.error("[WS] Error processing message:", error);
             }
-        } catch (error) {
-            console.error("[WS] Error processing message:", error);
-        }
-    });
-
-    ws.on("close", () => {
-        // Cleanup: Remove from all subscribed rooms
-        subscribedShows.forEach((showId) => {
-            leaveShowRoom(ws, showId);
         });
-        console.log(`[WS] Client disconnected (user: ${ws.userId || 'unauthenticated'})`);
+
+        ws.on("close", () => {
+            // Cleanup: Remove from all subscribed rooms
+            subscribedShows.forEach((showId) => {
+                leaveShowRoom(ws, showId);
+            });
+            console.log(`[WS] Client disconnected (user: ${ws.userId || 'unauthenticated'})`);
+        });
+
+        ws.on("error", (error) => {
+            console.error("[WS] Client error:", error);
+        });
     });
 
-    ws.on("error", (error) => {
-        console.error("[WS] Client error:", error);
-    });
-});
-
-console.log("[WS] WebSocket server initialized with room-based subscriptions and ticket auth");
+    console.log("[WS] WebSocket server initialized with room-based subscriptions and ticket auth");
+}
