@@ -1,0 +1,93 @@
+name: API Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: ticking_tickets_test
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Initialize Database
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: postgres
+        DB_PASSWORD: password
+        DB_NAME: ticking_tickets_test
+        REDIS_URL: redis://localhost:6379
+      run: |
+        # Use simple creation if init script fails on connection string
+        # But we are using service container DB, so defaults in connect.ts might need overrides
+        # We'll use the environment variables to control connect.ts
+        pnpm --filter backend run build
+        pnpm --filter backend run db:init
+        pnpm --filter backend run db:seed
+
+    - name: Start Backend and Run Tests
+      env:
+        PORT: 3000
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: postgres
+        DB_PASSWORD: password
+        DB_NAME: ticking_tickets_test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test_secret_key_12345
+        NODE_ENV: test
+        API_URL: http://localhost:3000/api/v1
+      run: |
+        # Start backend in background
+        pnpm --filter backend start &
+        
+        # Wait for backend to be ready (simple sleep loop or wait-on)
+        echo "Waiting for backend to start..."
+        sleep 10
+        
+        # Run tests
+        cd tests
+        pnpm test
