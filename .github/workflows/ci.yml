@@ -49,10 +49,16 @@ jobs:
       with:
         version: 8
 
-    - name: Install dependencies
+    - name: Install backend dependencies
+      working-directory: backend
       run: pnpm install --frozen-lockfile
 
-    - name: Initialize Database
+    - name: Install test dependencies
+      working-directory: tests
+      run: pnpm install --frozen-lockfile
+
+    - name: Build & Initialize Database
+      working-directory: backend
       env:
         DB_HOST: localhost
         DB_PORT: 5432
@@ -61,12 +67,9 @@ jobs:
         DB_NAME: ticking_tickets_test
         REDIS_URL: redis://localhost:6379
       run: |
-        # Use simple creation if init script fails on connection string
-        # But we are using service container DB, so defaults in connect.ts might need overrides
-        # We'll use the environment variables to control connect.ts
-        pnpm --filter backend run build
-        pnpm --filter backend run db:init
-        pnpm --filter backend run db:seed
+        pnpm run build
+        pnpm run db:init
+        pnpm run db:seed
 
     - name: Start Backend and Run Tests
       env:
@@ -82,12 +85,12 @@ jobs:
         API_URL: http://localhost:3000/api/v1
       run: |
         # Start backend in background
-        pnpm --filter backend start &
-        
-        # Wait for backend to be ready (simple sleep loop or wait-on)
+        cd backend && pnpm start &
+
+        # Wait for backend to be ready
         echo "Waiting for backend to start..."
         sleep 10
-        
+
         # Run tests
         cd tests
         pnpm test
