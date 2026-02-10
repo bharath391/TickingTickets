@@ -17,13 +17,13 @@ export async function initializeSeatsForShow(showId: string, totalSeats: number)
 /**
  * Atomically lock seats using Redis MULTI/EXEC transaction.
  * 
- * Why MULTI? Without it, there's a race condition:
- * - Thread A checks seat 1 is available ✓
- * - Thread B checks seat 1 is available ✓  
- * - Thread A locks seat 1
- * - Thread B locks seat 1 → DOUBLE BOOKING!
- * 
- * MULTI batches all commands and executes them atomically.
+  * Why MULTI? Without it, there's a race condition:
+  * - Thread A checks seat 1 is available
+  * - Thread B checks seat 1 is available
+  * - Thread A locks seat 1
+  * - Thread B locks seat 1 -> DOUBLE BOOKING!
+  * 
+  * MULTI batches all commands and executes them atomically.
  * If any sMove returns 0 (seat wasn't in available set), we rollback.
  */
 export async function tryLockSeats(showId: string, seatIds: number[]): Promise<boolean> {

@@ -27,7 +27,7 @@ stage1Queue.process(async (job) => {
     const stillInStage1 = await isInStage1(userId, showId);
 
     if (stillInStage1) {
-        // User didn't click PayNow within 30s → Unlock seats
+        // User didn't click PayNow within 30s. Unlock seats
         console.log(`[Queue1] User ${userId} didn't click PayNow. Unlocking seats.`);
 
         const seatIds = await getUserSeats(userId, showId);
@@ -39,7 +39,7 @@ stage1Queue.process(async (job) => {
 
         return { status: "unlocked", reason: "3min timeout" };
     } else {
-        // User clicked PayNow → Already moved to Stage 2, do nothing
+        // User clicked PayNow. Already moved to Stage 2, do nothing
         console.log(`[Queue1] User ${userId} already in Stage 2. No action needed.`);
         return { status: "skipped", reason: "already_in_stage2" };
     }
@@ -54,7 +54,7 @@ stage2Queue.process(async (job) => {
     const stillInStage2 = await isInStage2(userId, showId);
 
     if (stillInStage2) {
-        // Payment not completed within 5min → Unlock seats + timeout error
+        // Payment not completed within 5min. Unlock seats + timeout error
         console.log(`[Queue2] User ${userId} payment timeout. Unlocking seats.`);
 
         const seatIds = await getUserSeats(userId, showId);
@@ -66,7 +66,7 @@ stage2Queue.process(async (job) => {
 
         return { status: "timeout", reason: "7min payment timeout" };
     } else {
-        // Payment completed → Already removed from Stage 2, do nothing
+        // Payment completed. Already removed from Stage 2, do nothing
         console.log(`[Queue2] User ${userId} payment completed. No action needed.`);
         return { status: "skipped", reason: "payment_completed" };
     }

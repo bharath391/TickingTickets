@@ -1,4 +1,4 @@
-# 🎬 Ticking Tickets
+# Ticking Tickets
 
 > A real-time movie ticket booking backend with seat locking, queue-based payments, and WebSocket notifications — deployed on AWS EC2 with Docker & Nginx.
 
@@ -13,7 +13,7 @@
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ![High Level Architecture](architectures/highlevel.png)
 
@@ -21,32 +21,32 @@
 
 ![Booking Flow](architectures/booking_flow_architecture.png)
 
-> 📊 Database schema details available in [`backend/src/db/init.ts`](backend/src/db/init.ts)
+> Database schema details available in [`backend/src/db/init.ts`](backend/src/db/init.ts)
 >
-> 📐 More architecture diagrams available in [`architectures/`](architectures/)
+> More architecture diagrams available in [`architectures/`](architectures/)
 
-### 🔌 WebSocket Flow (Real-time Seat Updates)
+### WebSocket Flow (Real-time Seat Updates)
 
 The WebSocket layer powers **real-time seat updates** across all connected clients. It uses a **ticket-based authentication** system (not raw JWTs) to prevent token leakage in WebSocket URLs.
 
 ```
-1. Client calls GET /api/v1/auth/ticket  →  receives one-time ticket (stored in Redis, 30s TTL)
+1. Client calls GET /api/v1/auth/ticket  ->  receives one-time ticket (stored in Redis, 30s TTL)
 2. Client opens WebSocket: ws://localhost:4000/ws
 3. Client sends { event: "auth", data: { ticket: "<ticket>" } }
-4. Server validates & consumes ticket (single-use)  →  sends auth-success
+4. Server validates & consumes ticket (single-use)  ->  sends auth-success
 5. Client sends { event: "join-show", data: { showId: "1" } }
-6. Server adds client to show room  →  streams seat-state events
+6. Server adds client to show room  ->  streams seat-state events
 ```
 
-#### Client → Server Events
+#### Client -> Server Events
 
 | Event | Payload | Description | Requires Auth |
 |-------|---------|-------------|---------------|
-| `auth` | `{ ticket: "<ticket>" }` | Authenticate using one-time ticket | ❌ (first step) |
-| `join-show` | `{ showId: "1" }` | Subscribe to a show's seat updates | ✅ |
-| `leave-show` | `{ showId: "1" }` | Unsubscribe from a show room | ✅ |
+| `auth` | `{ ticket: "<ticket>" }` | Authenticate using one-time ticket | No (first step) |
+| `join-show` | `{ showId: "1" }` | Subscribe to a show's seat updates | Yes |
+| `leave-show` | `{ showId: "1" }` | Unsubscribe from a show room | Yes |
 
-#### Server → Client Events
+#### Server -> Client Events
 
 | Event | Payload | When |
 |-------|---------|------|
@@ -73,7 +73,7 @@ The WebSocket layer powers **real-time seat updates** across all connected clien
 
 ---
 
-## ✨ Features
+## Features
 
 - **JWT Authentication** — Secure signup/login for Users and Admins
 - **Real-time Seat Locking** — Redis-based locks with automatic expiry (prevents double-booking)
@@ -88,7 +88,7 @@ The WebSocket layer powers **real-time seat updates** across all connected clien
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -107,58 +107,58 @@ The WebSocket layer powers **real-time seat updates** across all connected clien
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### Auth (`/api/v1/auth`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/signup` | Register a new user | ❌ |
-| `POST` | `/login` | Login (returns JWT) | ❌ |
-| `POST` | `/admin/login` | Admin login | ❌ |
-| `GET` | `/ticket` | Get WebSocket ticket | 🔐 User |
+| `POST` | `/signup` | Register a new user | No |
+| `POST` | `/login` | Login (returns JWT) | No |
+| `POST` | `/admin/login` | Admin login | No |
+| `GET` | `/ticket` | Get WebSocket ticket | User |
 
 ### Admin (`/api/v1/admin`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/movies` | Create a movie | 🔐 Admin |
-| `PUT` | `/movies/:id` | Update a movie | 🔐 Admin |
-| `DELETE` | `/movies/:id` | Delete a movie | 🔐 Admin |
-| `POST` | `/shows` | Create a show | 🔐 Admin |
-| `PUT` | `/shows/:id` | Update a show | 🔐 Admin |
-| `DELETE` | `/shows/:id` | Delete a show | 🔐 Admin |
-| `POST` | `/shows/:id/go-live` | Open booking for a show | 🔐 Admin |
-| `POST` | `/shows/:id/stop-booking` | Close booking | 🔐 Admin |
-| `POST` | `/theatres` | Create a theatre | 🔐 Admin |
-| `PUT` | `/theatres/:id` | Update a theatre | 🔐 Admin |
-| `DELETE` | `/theatres/:id` | Delete a theatre | 🔐 Admin |
+| `POST` | `/movies` | Create a movie | Admin |
+| `PUT` | `/movies/:id` | Update a movie | Admin |
+| `DELETE` | `/movies/:id` | Delete a movie | Admin |
+| `POST` | `/shows` | Create a show | Admin |
+| `PUT` | `/shows/:id` | Update a show | Admin |
+| `DELETE` | `/shows/:id` | Delete a show | Admin |
+| `POST` | `/shows/:id/go-live` | Open booking for a show | Admin |
+| `POST` | `/shows/:id/stop-booking` | Close booking | Admin |
+| `POST` | `/theatres` | Create a theatre | Admin |
+| `PUT` | `/theatres/:id` | Update a theatre | Admin |
+| `DELETE` | `/theatres/:id` | Delete a theatre | Admin |
 
 ### Search (`/api/v1/search`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/?q=<query>` | Search shows/movies | ❌ |
+| `GET` | `/?q=<query>` | Search shows/movies | No |
 
 ### Bookings (`/api/v1/bookings`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/:showId/lock` | Lock seats (body: `{ seats: [1,2] }`) | 🔐 User |
-| `POST` | `/:showId/pay` | Initiate payment | 🔐 User |
-| `POST` | `/:showId/cancel` | Cancel booking | 🔐 User |
-| `POST` | `/confirm` | Confirm after payment | 🔐 User |
+| `POST` | `/:showId/lock` | Lock seats (body: `{ seats: [1,2] }`) | User |
+| `POST` | `/:showId/pay` | Initiate payment | User |
+| `POST` | `/:showId/cancel` | Cancel booking | User |
+| `POST` | `/confirm` | Confirm after payment | User |
 
 ### Payments (`/api/v1/payments`)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/initiate` | Create Razorpay order | 🔐 User |
-| `POST` | `/verify` | Verify payment signature | 🔐 User |
+| `POST` | `/initiate` | Create Razorpay order | User |
+| `POST` | `/verify` | Verify payment signature | User |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose
@@ -199,27 +199,27 @@ curl http://localhost/api/v1/search?q=a
 
 ---
 
-## 🐳 Deployment (AWS EC2)
+## Deployment (AWS EC2)
 
 ```
 User (Browser)
-     │
-     ▼
-  Nginx (:80)          ← Reverse Proxy
-     │
-     ▼
-  Backend (:3000)      ← Node.js + Express
-     │
-     ├──► Redis         ← Seat Locks + Queues
-     │
-     └──► PostgreSQL    ← DB + Persistence
+     |
+     v
+  Nginx (:80)          <- Reverse Proxy
+     |
+     v
+  Backend (:3000)      <- Node.js + Express
+     |
+     |--> Redis         <- Seat Locks + Queues
+     |
+     |--> PostgreSQL    <- DB + Persistence
 ```
 
 Deployed on an **AWS EC2 (t2.micro)** instance running Ubuntu with Docker Compose.
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 cd tests
@@ -231,7 +231,7 @@ Tests cover Auth, Admin CRUD, Search, and Booking flows using Jest + Supertest.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 TickingTickets/
@@ -258,7 +258,6 @@ TickingTickets/
 
 ---
 
-## 📄 License
+## License
 
 MIT
-

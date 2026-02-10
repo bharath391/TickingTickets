@@ -6,7 +6,6 @@ import tryCatch from "../middlewares/tryCatch.js";
 import { createSocketTicket } from "../redis/redis.tickets.js";
 import type { authReq } from "../types/types.js";
 
-// Password Policy Validator
 const validatePassword = (password: string): { valid: boolean; message: string } => {
   const minLength = 8;
   const hasUppercase = /[A-Z]/.test(password);
@@ -33,7 +32,6 @@ const validatePassword = (password: string): { valid: boolean; message: string }
   return { valid: true, message: "Password is strong" };
 };
 
-// Signup Controller
 export const signup = async (req: Request, res: Response) => {
   await tryCatch(async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
@@ -53,17 +51,14 @@ export const signup = async (req: Request, res: Response) => {
       return res.status(400).json({ message: passwordCheck.message });
     }
 
-    // Check if user already exists
     const userCheck = await execQueryPool("SELECT * FROM users WHERE email = $1", [email]);
     if (userCheck.rows.length > 0) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
     const newUser = await execQueryPool(
       "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email",
       [name, email, hashedPassword]
@@ -76,7 +71,6 @@ export const signup = async (req: Request, res: Response) => {
   }, req, res, "signup");
 };
 
-// Login Controller
 export const login = async (req: Request, res: Response) => {
   await tryCatch(async (req: Request, res: Response) => {
     const { email, password } = req.body;
@@ -90,7 +84,6 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid email format" });
     }
 
-    // Find user
     const userResult = await execQueryPool("SELECT * FROM users WHERE email = $1", [email]);
     const user = userResult.rows[0];
 
@@ -98,7 +91,6 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -110,7 +102,6 @@ export const login = async (req: Request, res: Response) => {
       }
     }
 
-    // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET!,
@@ -135,7 +126,6 @@ export const login = async (req: Request, res: Response) => {
   }, req, res, "login");
 };
 
-// Generate Socket Ticket
 export const getSocketTicket = async (req: Request, res: Response) => {
   await tryCatch(async (req: authReq, res: Response) => {
     if (!req.user || !req.user.userId) {

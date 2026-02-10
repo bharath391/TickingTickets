@@ -9,7 +9,7 @@ import { pool } from './connect.js';
 
 const seedDatabase = async () => {
     try {
-        console.log("🌱 Starting Database Seed...");
+        console.log("Starting Database Seed...");
 
         await pool.query('TRUNCATE TABLE bookings, shows, theatres, movies, users, admins CASCADE');
 
@@ -19,14 +19,14 @@ const seedDatabase = async () => {
             ('Bob User', 'bob@example.com', 'password123')
             RETURNING id;
         `);
-        console.log(`✅ Created ${users.rowCount} Users`);
+        console.log(`Created ${users.rowCount} Users`);
 
         await pool.query(`
             INSERT INTO admins (name, email, password) VALUES 
             ('Super Admin', 'admin@example.com', 'adminpass'),
             ('sharath', 'sharath@gmail.com', '1234')
         `);
-        console.log(`✅ Created Admin`);
+        console.log(`Created Admin`);
 
         const movies = await pool.query(`
             INSERT INTO movies (title, description, genres, price) VALUES 
@@ -37,7 +37,7 @@ const seedDatabase = async () => {
             ('Parasite', 'Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan.', 'Drama, Thriller', 180)
             RETURNING id, title;
         `);
-        console.log(`✅ Created ${movies.rowCount} Movies`);
+        console.log(`Created ${movies.rowCount} Movies`);
 
         const theatres = await pool.query(`
             INSERT INTO theatres (name, location) VALUES 
@@ -45,7 +45,7 @@ const seedDatabase = async () => {
             ('IMAX Theatre', 'Tech Park')
             RETURNING id, name;
         `);
-        console.log(`✅ Created ${theatres.rowCount} Theatres`);
+        console.log(`Created ${theatres.rowCount} Theatres`);
 
         const showValues = [];
         const showTypes = ['Morning', 'Matinee', 'Evening', 'Late Night'];
@@ -72,12 +72,12 @@ const seedDatabase = async () => {
                 }
             }
         }
-        console.log(`✅ Created Shows for all movies/theatres`);
+        console.log(`Created Shows for all movies/theatres`);
 
-        console.log("🎉 Database Seeded Successfully!");
+        console.log("Database Seeded Successfully!");
 
     } catch (error) {
-        console.error("❌ Error seeding database:", error);
+        console.error("Error seeding database:", error);
     } finally {
         await pool.end();
     }
