@@ -15,13 +15,15 @@
 
 ## 🏗️ Architecture
 
-![High Level Architecture](images/highlevel.png)
+![High Level Architecture](architectures/highlevel.png)
 
 ### Booking Flow (Seat Locking + Payment)
 
-![Booking Flow](images/booking_flow_architecture.png)
+![Booking Flow](architectures/booking_flow_architecture.png)
 
 > 📊 Database schema details available in [`backend/src/db/init.ts`](backend/src/db/init.ts)
+>
+> 📐 More architecture diagrams available in [`architectures/`](architectures/)
 
 ### 🔌 WebSocket Flow (Real-time Seat Updates)
 
@@ -249,7 +251,7 @@ TickingTickets/
 ├── nginx/
 │   └── default.conf       # Reverse proxy config
 ├── tests/                 # Integration tests
-├── images/                # Architecture diagrams
+├── architectures/                # Architecture diagrams
 ├── docker-compose.yml
 └── README.md
 ```
