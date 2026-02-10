@@ -19,7 +19,6 @@ jobs:
           POSTGRES_DB: ticking_tickets_test
         ports:
           - 5432:5432
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -87,10 +86,10 @@ jobs:
         # Start backend in background
         cd backend && pnpm start &
 
+        
         # Wait for backend to be ready
         echo "Waiting for backend to start..."
         sleep 10
 
         # Run tests
-        cd tests
-        pnpm test
+        cd tests && pnpm test
