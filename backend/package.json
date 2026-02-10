@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "lint": "tsc --noEmit",
-    "deploy": "sh deploy_ecr.sh",
     "build": "tsc",
     "start": "node dist/index.js",
     "db:init": "node dist/db/init.js",

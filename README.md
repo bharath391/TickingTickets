@@ -166,7 +166,7 @@ The WebSocket layer powers **real-time seat updates** across all connected clien
 ### Run Locally
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/TickingTickets.git
+git clone https://github.com/bharath391/TickingTickets.git
 cd TickingTickets
 
 # Create environment file

@@ -4,4 +4,4 @@ dist
 .env
 *.log
 tests
-images
+architectures
