@@ -13,6 +13,12 @@
 
 ---
 
+## 🎥 Live Demo
+
+> [Watch the live deployment demo on EC2 (API calls + Server Logs)](https://drive.google.com/file/d/1zhDiZtWaM7dAtENo_ikOx3kQRE_o0Q67/view?usp=sharing)
+
+---
+
 ## Architecture
 
 ![High Level Architecture](architectures/highlevel.png)
